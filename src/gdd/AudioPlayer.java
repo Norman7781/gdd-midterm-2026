@@ -8,6 +8,7 @@ import java.util.Scanner;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineEvent;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
@@ -27,6 +28,12 @@ public class AudioPlayer {
     public AudioPlayer(String filePath)
             throws UnsupportedAudioFileException,
             IOException, LineUnavailableException {
+        this(filePath, true);
+    }
+
+    public AudioPlayer(String filePath, boolean loopContinuously)
+            throws UnsupportedAudioFileException,
+            IOException, LineUnavailableException {
         // create AudioInputStream object
         this.filePath = filePath;
         audioInputStream
@@ -38,7 +45,31 @@ public class AudioPlayer {
         // open audioInputStream to the clip
         clip.open(audioInputStream);
 
-        clip.loop(Clip.LOOP_CONTINUOUSLY);
+        if (loopContinuously) {
+            clip.loop(Clip.LOOP_CONTINUOUSLY);
+        }
+    }
+
+    public static void playEffect(String filePath) {
+        try {
+            AudioInputStream effectStream = AudioSystem.getAudioInputStream(
+                    new File(filePath).getAbsoluteFile());
+            Clip effectClip = AudioSystem.getClip();
+            effectClip.open(effectStream);
+            effectClip.addLineListener(event -> {
+                if (event.getType() == LineEvent.Type.STOP) {
+                    event.getLine().close();
+                    try {
+                        effectStream.close();
+                    } catch (IOException ex) {
+                        // Ignore cleanup errors for short-lived sound effects.
+                    }
+                }
+            });
+            effectClip.start();
+        } catch (Exception e) {
+            System.err.println("Error playing sound effect: " + e.getMessage());
+        }
     }
 
     public static void main(String[] args) {
